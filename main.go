@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
+	"os"
 	"server/routes"
 
 	"github.com/gorilla/mux"
@@ -15,6 +15,10 @@ func main() {
 	r.HandleFunc("/sendOtp/", routes.SentOtpEndpoint).Methods("POST")
 	r.HandleFunc("/verify/", routes.VerifyOtpEndpoint).Methods("POST")
 
-	fmt.Println("Starting server at port 8080")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // default port if not set
+	}
+	fmt.Printf("Starting server on port %s\n", port)
+	http.ListenAndServe(":"+port, nil)
 }
