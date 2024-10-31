@@ -10,8 +10,7 @@ import (
 	"os"
 	"server/vars"
 	"strings"
-
-	"github.com/joho/godotenv"
+	// Remove the import for godotenv as it's not needed in this context
 )
 
 func GenerateOtp() string {
@@ -19,16 +18,16 @@ func GenerateOtp() string {
 }
 
 func SendMessage(mobile string, Otps map[string]string) string {
-	err := godotenv.Load()
-	if err != nil {
-		log.Panic("Error loading environment variables: " + err.Error())
-	}
-
+	// No need to load the .env file here
 	accountSid := os.Getenv("ACCOUNT_SID")
 	authToken := os.Getenv("AUTH_TOKEN")
 
+	if accountSid == "" || authToken == "" {
+		log.Panic("Environment variables for ACCOUNT_SID or AUTH_TOKEN are not set.")
+	}
+
 	log.Println("Account SID:", accountSid)
-	log.Println("Auth Token:", authToken)
+	log.Println("Auth Token is loaded")
 
 	apiUrl := "https://api.twilio.com/2010-04-01/Accounts/" + accountSid + "/Messages.json"
 	otp := GenerateOtp()
