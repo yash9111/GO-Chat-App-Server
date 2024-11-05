@@ -10,7 +10,6 @@ import (
 	"os"
 	"server/vars"
 	"strings"
-	// Remove the import for godotenv as it's not needed in this context
 )
 
 func GenerateOtp() string {
