@@ -4,166 +4,74 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebSocket Chat Client</title>
+    <title>Chat Room</title>
     <style>
-        /* Basic reset */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        #chat {
+            width: 100%;
+            height: 300px;
+            border: 1px solid #ddd;
+            overflow-y: scroll;
+            padding: 10px;
             font-family: Arial, sans-serif;
         }
 
-        body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f4f4f9;
-        }
-
-        .chat-container {
-            width: 400px;
-            max-width: 100%;
-            background-color: #ffffff;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            border-radius: 8px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .chat-header {
-            background-color: #4a90e2;
-            color: white;
-            padding: 15px;
-            text-align: center;
-            font-size: 1.2em;
-        }
-
-        .chat-box {
-            flex: 1;
-            padding: 15px;
-            overflow-y: auto;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .chat-message {
-            margin-bottom: 10px;
+        #messageInput,
+        #sendButton {
             padding: 10px;
-            border-radius: 8px;
-            max-width: 70%;
-            word-wrap: break-word;
-        }
-
-        .sent {
-            background-color: #4a90e2;
-            color: white;
-            align-self: flex-end;
-        }
-
-        .received {
-            background-color: #e4e6eb;
-            color: #333;
-            align-self: flex-start;
-        }
-
-        .chat-footer {
-            display: flex;
-            padding: 10px;
-            border-top: 1px solid #ddd;
-        }
-
-        .chat-footer input[type="text"] {
-            flex: 1;
-            padding: 10px;
-            border: none;
-            border-radius: 4px;
-            margin-right: 10px;
-            font-size: 1em;
-            outline: none;
-            box-shadow: 0px 0px 5px rgba(0, 0, 0, 0.1);
-        }
-
-        .chat-footer button {
-            padding: 10px 20px;
-            border: none;
-            background-color: #4a90e2;
-            color: white;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 1em;
-            transition: background-color 0.3s;
-        }
-
-        .chat-footer button:hover {
-            background-color: #357ab7;
+            font-size: 1rem;
+            margin-top: 10px;
         }
     </style>
 </head>
 
 <body>
-
-    <div class="chat-container">
-        <div class="chat-header">WebSocket Chat</div>
-        <div class="chat-box" id="chatBox"></div>
-        <div class="chat-footer">
-            <input type="text" id="messageInput" placeholder="Type a message..." />
-            <button onclick="sendMessage()">Send</button>
-        </div>
-    </div>
+    <div id="chat">Connecting to chat...</div>
+    <input type="text" id="messageInput" placeholder="Type a message" />
+    <button id="sendButton">Send</button>
 
     <script>
-        // Generate a unique user ID for each session
-        const userId = `user${Date.now()}_${Math.floor(Math.random() * 1000)}`;
-        const ws = new WebSocket(`ws://localhost:5000/ws?room=room1&user=${userId}`);
+        const room = `room${Math.floor(Math.random() * 1000)}`;
+        // const userId = `user${Math.floor(Math.random() * 1000000)}`;
+        const userId = "user1"
+        const ws = new WebSocket(`wss://go-chat-app-server.onrender.com/ws?room=${room}&user=${userId}`);
 
-        ws.onopen = function () {
-            console.log(`Connected to WebSocket server as ${userId}`);
+        const chatDiv = document.getElementById("chat");
+        const messageInput = document.getElementById("messageInput");
+        const sendButton = document.getElementById("sendButton");
+
+        ws.onopen = () => {
+            addMessage(`Connected as ${userId} in ${room}`);
         };
 
-        ws.onmessage = function (event) {
-            displayMessage(event.data, 'received');
+        ws.onmessage = (event) => {
+            // Display incoming message in chat
+            addMessage(event.data);
         };
 
-        ws.onclose = function () {
-            console.log("Disconnected from WebSocket server");
-        };
-
-        ws.onerror = function (error) {
+        ws.onerror = (error) => {
             console.error("WebSocket error:", error);
+            addMessage("WebSocket error. Check console for details.");
         };
 
-        function sendMessage() {
-            const messageInput = document.getElementById("messageInput");
-            const message = messageInput.value.trim();
+        ws.onclose = () => {
+            addMessage("Disconnected from chat.");
+        };
 
+        sendButton.onclick = () => {
+            const message = messageInput.value;
             if (message) {
                 // Send message to WebSocket server
                 ws.send(message);
-
-                // Display message in chat as "sent"
-                displayMessage(message, 'sent');
-
-                // Clear the input field
                 messageInput.value = "";
+                addMessage(`You: ${message}`);
             }
-        }
+        };
 
-        function displayMessage(message, type) {
-            const chatBox = document.getElementById("chatBox");
-
-            // Create a message element
+        function addMessage(msg) {
             const messageElement = document.createElement("div");
-            messageElement.classList.add("chat-message", type);
-            messageElement.textContent = message;
-
-            // Append the message to the chat box
-            chatBox.appendChild(messageElement);
-
-            // Scroll to the bottom of the chat box
-            chatBox.scrollTop = chatBox.scrollHeight;
+            messageElement.textContent = msg;
+            chatDiv.appendChild(messageElement);
+            chatDiv.scrollTop = chatDiv.scrollHeight; // Auto-scroll to the latest message
         }
     </script>
 </body>
