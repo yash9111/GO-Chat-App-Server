@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -81,14 +82,35 @@ func removeClientFromRoom(roomID string, client *Connection) {
 	}
 }
 
+type MessagePayload struct {
+	RoomID   string `json:"room_id"`
+	SenderID string `json:"sender_id"`
+	Message  string `json:"message"`
+}
+
 // Broadcast message to all clients in the room except sender
 func broadcastToRoom(roomID string, message []byte, senderID string) {
 	mu.Lock()
 	defer mu.Unlock()
 
+	// Create the message payload with the required fields
+	payload := MessagePayload{
+		RoomID:   roomID,
+		SenderID: senderID,
+		Message:  string(message[:]),
+	}
+
+	// Marshal the payload into JSON format
+	jsonMessage, err := json.Marshal(payload)
+	if err != nil {
+		fmt.Println("Error marshalling JSON:", err)
+		return
+	}
+
+	// Broadcast the JSON message to all clients in the room except the sender
 	for _, client := range rooms[roomID] {
-		if client.UserID != senderID { // Skip sender
-			err := client.Conn.WriteMessage(websocket.TextMessage, message)
+		if client.UserID != senderID {
+			err := client.Conn.WriteMessage(websocket.TextMessage, jsonMessage)
 			if err != nil {
 				fmt.Println("Broadcast error:", err)
 			}

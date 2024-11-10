@@ -4,31 +4,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebSocket Client</title>
+    <title>WebSocket Chat Room</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background-color: #f4f6f8;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            justify-content: center;
+        }
+
+        h1 {
+            color: #4a4a4a;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        #setupContainer,
+        #chatContainer {
+            width: 90%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            outline: none;
+            font-size: 16px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        #chatContainer {
+            display: none;
+            flex-direction: column;
+            background-color: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #messages {
+            width: 100%;
+            height: 300px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            margin-bottom: 10px;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 10px;
+            border-radius: 15px;
+            font-size: 14px;
+            line-height: 1.4;
+            display: inline-block;
+        }
+
+        .sent {
+            background-color: #007bff;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 0;
+        }
+
+        .received {
+            background-color: #e4e6eb;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 0;
+        }
+
+        #messageInput {
+            width: calc(100% - 80px);
+            margin-right: 10px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+            outline: none;
+        }
+
+        #sendBtn {
+            width: 70px;
+            padding: 10px;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
 </head>
 
 <body>
-    <input type="text" id="messageInput" placeholder="Enter a message">
-    <button onclick="sendMessage()">Send Message</button>
-    <div id="output"></div>
+    <h1>WebSocket Chat Room</h1>
+    <div id="setupContainer">
+        <input type="text" id="roomInput" placeholder="Enter Room ID">
+        <input type="text" id="userInput" placeholder="Enter User ID">
+        <button id="connectBtn">Connect to Room</button>
+    </div>
+
+    <div id="chatContainer">
+        <div id="messages"></div>
+        <div style="display: flex; width: 100%;">
+            <input type="text" id="messageInput" placeholder="Enter message">
+            <button id="sendBtn">Send</button>
+        </div>
+    </div>
 
     <script>
-        const socket = new WebSocket("ws://localhost:5000/ws");
+        let socket;
 
-        socket.onopen = (event) => {
-            console.log("WebSocket connection opened");
+        document.getElementById('connectBtn').onclick = () => {
+            const roomID = document.getElementById('roomInput').value;
+            const userID = document.getElementById('userInput').value;
+            if (!roomID || !userID) {
+                alert('Please enter both Room ID and User ID');
+                return;
+            }
+
+            socket = new WebSocket(`ws://localhost:5000/ws?room=${roomID}&user=${userID}`);
+
+            socket.onopen = () => {
+                document.getElementById('setupContainer').style.display = 'none';
+                document.getElementById('chatContainer').style.display = 'flex';
+                displayMessage(`Connected to room ${roomID} as ${userID}`, 'received');
+            };
+
+            socket.onmessage = (event) => {
+                displayMessage(event.data, 'received');
+            };
+
+            socket.onerror = (error) => {
+                displayMessage('WebSocket error', 'received');
+            };
+
+            socket.onclose = () => {
+                displayMessage('Disconnected from server', 'received');
+                document.getElementById('setupContainer').style.display = 'flex';
+                document.getElementById('chatContainer').style.display = 'none';
+            };
         };
 
-        socket.onmessage = (event) => {
-            const output = document.getElementById("output");
-            output.innerHTML += `<p>Received: ${event.data}</p>`;
+        document.getElementById('sendBtn').onclick = () => {
+            const message = document.getElementById('messageInput').value;
+            if (socket && socket.readyState === WebSocket.OPEN && message) {
+                socket.send(message);
+                displayMessage(message, 'sent');
+                document.getElementById('messageInput').value = '';
+            } else {
+                displayMessage('Error: Unable to send message', 'received');
+            }
         };
 
-        function sendMessage() {
-            const messageInput = document.getElementById("messageInput");
-            const message = messageInput.value;
-            socket.send(message);
-            messageInput.value = "";
+        function displayMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+            document.getElementById('messages').appendChild(messageDiv);
+            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
         }
     </script>
 </body>
